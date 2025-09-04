@@ -106,6 +106,12 @@ func (m *Manager) StoreImageMetadata(image *types.GoldenImage) error {
 		return fmt.Errorf("failed to marshal image metadata: %w", err)
 	}
 
+	// Encrypt sensitive metadata for FedRAMP compliance
+	encryptedData, err := m.encryptData(imageData)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt image metadata: %w", err)
+	}
+
 	// Create ConfigMap for image metadata
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -118,7 +124,7 @@ func (m *Manager) StoreImageMetadata(image *types.GoldenImage) error {
 			},
 		},
 		Data: map[string]string{
-			"metadata": string(imageData),
+			"metadata": string(encryptedData),
 		},
 	}
 
@@ -145,9 +151,15 @@ func (m *Manager) GetImageMetadata(imageName string) (*types.GoldenImage, error)
 		return nil, fmt.Errorf("failed to get image metadata: %w", err)
 	}
 
+	// Decrypt metadata for FedRAMP compliance
+	decryptedData, err := m.decryptData([]byte(configMap.Data["metadata"]))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt image metadata: %w", err)
+	}
+
 	// Parse image metadata
 	var image types.GoldenImage
-	err = json.Unmarshal([]byte(configMap.Data["metadata"]), &image)
+	err = json.Unmarshal(decryptedData, &image)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal image metadata: %w", err)
 	}
@@ -185,9 +197,16 @@ func (m *Manager) ListImages() ([]*types.GoldenImage, error) {
 
 	var images []*types.GoldenImage
 	for _, configMap := range configMaps.Items {
+		// Decrypt metadata for FedRAMP compliance
+		decryptedData, err := m.decryptData([]byte(configMap.Data["metadata"]))
+		if err != nil {
+			klog.Errorf("Failed to decrypt image metadata for %s: %v", configMap.Name, err)
+			continue
+		}
+
 		// Parse image metadata
 		var image types.GoldenImage
-		err = json.Unmarshal([]byte(configMap.Data["metadata"]), &image)
+		err = json.Unmarshal(decryptedData, &image)
 		if err != nil {
 			klog.Errorf("Failed to unmarshal image metadata for %s: %v", configMap.Name, err)
 			continue
