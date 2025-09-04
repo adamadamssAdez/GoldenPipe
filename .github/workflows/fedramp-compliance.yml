@@ -21,8 +21,8 @@ jobs:
     - name: Run security scan
       run: |
         # Install security scanning tools
-        apt-get update
-        apt-get install -y bandit semgrep
+        sudo apt-get update
+        sudo apt-get install -y bandit semgrep
         
         # Scan Go code for security issues
         bandit -r microservice/ -f json -o security-report.json || true

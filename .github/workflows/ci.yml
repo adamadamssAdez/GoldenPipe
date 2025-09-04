@@ -80,7 +80,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && secrets.KUBE_CONFIG != ''
+    if: github.ref == 'refs/heads/main'
     environment: production
     
     steps:
@@ -92,12 +92,24 @@ jobs:
       with:
         version: 'v1.29.0'
     
+    - name: Check for Kubernetes configuration
+      run: |
+        if [ -z "${{ secrets.KUBE_CONFIG }}" ]; then
+          echo "KUBE_CONFIG secret not found. Skipping deployment."
+          echo "SKIP_DEPLOY=true" >> $GITHUB_ENV
+        else
+          echo "KUBE_CONFIG secret found. Proceeding with deployment."
+          echo "SKIP_DEPLOY=false" >> $GITHUB_ENV
+        fi
+    
     - name: Configure kubectl
+      if: env.SKIP_DEPLOY == 'false'
       run: |
         echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
         export KUBECONFIG=kubeconfig
     
     - name: Deploy to Kubernetes
+      if: env.SKIP_DEPLOY == 'false'
       run: |
         # Update image tag in deployment
         sed -i "s|image: goldenpipe:latest|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest|g" k8s/base/deployment.yaml
@@ -109,9 +121,16 @@ jobs:
         kubectl rollout status deployment/goldenpipe -n goldenpipe-system --timeout=300s
     
     - name: Verify deployment
+      if: env.SKIP_DEPLOY == 'false'
       run: |
         kubectl get pods -n goldenpipe-system
         kubectl get services -n goldenpipe-system
+    
+    - name: Deployment skipped
+      if: env.SKIP_DEPLOY == 'true'
+      run: |
+        echo "✅ Deployment skipped - KUBE_CONFIG secret not configured"
+        echo "This is normal for development/testing environments"
 
   # Dry-run deployment validation (always runs)
   validate-manifests:
