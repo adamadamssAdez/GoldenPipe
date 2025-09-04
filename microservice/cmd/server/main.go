@@ -43,7 +43,10 @@ func init() {
 	rootCmd.Flags().Int("max-concurrent-vms", 5, "Maximum number of concurrent VM operations")
 
 	// Bind flags to viper
-	viper.BindPFlags(rootCmd.Flags())
+	if err := viper.BindPFlags(rootCmd.Flags()); err != nil {
+		fmt.Printf("Error binding flags: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func initConfig() {
@@ -57,7 +60,13 @@ func initConfig() {
 	}
 
 	viper.AutomaticEnv()
-	viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err != nil {
+		// Config file not found is not an error, just use defaults
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			fmt.Printf("Error reading config file: %v\n", err)
+			os.Exit(1)
+		}
+	}
 }
 
 func runServer(cmd *cobra.Command, args []string) {
