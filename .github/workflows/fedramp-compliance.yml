@@ -34,7 +34,7 @@ jobs:
         echo "Security scan completed" > compliance-report.txt
     
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
@@ -93,7 +93,7 @@ jobs:
         EOF
     
     - name: Upload compliance matrix
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: compliance-matrix
         path: fedramp-compliance-matrix.md
