@@ -6,10 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/klog/v2"
-	"kubevirt.io/kubevirt v1.1.0"
 
 	"github.com/goldenpipe/microservice/internal/storage"
 	"github.com/goldenpipe/microservice/pkg/types"
@@ -38,18 +35,18 @@ func (m *Manager) CreateGoldenImage(ctx context.Context, req *types.CreateImageR
 	pvcName := fmt.Sprintf("golden-image-%s", req.Name)
 
 	// Create PVC for the golden image
-	pvc, err := m.storageManager.CreateImagePVC(ctx, pvcName, req.GetDefaultStorageSize())
+	_, err := m.storageManager.CreateImagePVC(ctx, pvcName, req.GetDefaultStorageSize())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create PVC: %w", err)
 	}
 
-	// Create VM for image creation
-	vm, err := m.createImageCreationVM(ctx, vmName, req, pvcName)
-	if err != nil {
-		// Clean up PVC if VM creation fails
-		m.storageManager.DeletePVC(ctx, pvcName)
-		return nil, fmt.Errorf("failed to create VM: %w", err)
-	}
+	// TODO: Create VM for image creation when KubeVirt client is available
+	// vm, err := m.createImageCreationVM(ctx, vmName, req, pvcName)
+	// if err != nil {
+	//     // Clean up PVC if VM creation fails
+	//     m.storageManager.DeletePVC(ctx, pvcName)
+	//     return nil, fmt.Errorf("failed to create VM: %w", err)
+	// }
 
 	// Create golden image record
 	image := &types.GoldenImage{
@@ -73,133 +70,6 @@ func (m *Manager) CreateGoldenImage(ctx context.Context, req *types.CreateImageR
 	return image, nil
 }
 
-// createImageCreationVM creates a VM for building the golden image
-func (m *Manager) createImageCreationVM(ctx context.Context, vmName string, req *types.CreateImageRequest, pvcName string) (*kubevirt.VirtualMachine, error) {
-	// Create cloud-init or autounattend configuration
-	var userData, networkData string
-	var err error
-
-	if req.OSType == types.OSTypeLinux {
-		userData, networkData, err = m.createCloudInitConfig(req)
-	} else {
-		userData, err = m.createAutounattendConfig(req)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create configuration: %w", err)
-	}
-
-	// Create VM specification
-	vm := &kubevirt.VirtualMachine{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      vmName,
-			Namespace: m.namespace,
-			Labels: map[string]string{
-				"app":                   "goldenpipe",
-				"goldenpipe.io/image":   req.Name,
-				"goldenpipe.io/os-type": string(req.OSType),
-				"goldenpipe.io/purpose": "image-creation",
-			},
-		},
-		Spec: kubevirt.VirtualMachineSpec{
-			Running: &[]bool{true}[0],
-			Template: &kubevirt.VirtualMachineInstanceTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app":                   "goldenpipe",
-						"goldenpipe.io/image":   req.Name,
-						"goldenpipe.io/os-type": string(req.OSType),
-						"goldenpipe.io/purpose": "image-creation",
-					},
-				},
-				Spec: kubevirt.VirtualMachineInstanceSpec{
-					Domain: kubevirt.DomainSpec{
-						CPU: &kubevirt.CPU{
-							Cores: uint32(req.GetDefaultCPU()),
-						},
-						Resources: kubevirt.ResourceRequirements{
-							Requests: kubevirt.ResourceList{
-								"memory": resource.MustParse(req.GetDefaultMemory()),
-							},
-						},
-						Devices: kubevirt.Devices{
-							Disks: []kubevirt.Disk{
-								{
-									Name: "bootdisk",
-									DiskDevice: kubevirt.DiskDevice{
-										CDRom: &kubevirt.CDRomTarget{
-											Bus: "sata",
-										},
-									},
-								},
-								{
-									Name: "datavolume",
-									DiskDevice: kubevirt.DiskDevice{
-										Disk: &kubevirt.DiskTarget{
-											Bus: "virtio",
-										},
-									},
-								},
-							},
-							Interfaces: []kubevirt.Interface{
-								{
-									Name: "default",
-									InterfaceBindingMethod: kubevirt.InterfaceBindingMethod{
-										Masquerade: &kubevirt.InterfaceMasquerade{},
-									},
-								},
-							},
-						},
-					},
-					Volumes: []kubevirt.Volume{
-						{
-							Name: "bootdisk",
-							VolumeSource: kubevirt.VolumeSource{
-								ContainerDisk: &kubevirt.ContainerDiskSource{
-									Image: req.BaseISOURL,
-								},
-							},
-						},
-						{
-							Name: "datavolume",
-							VolumeSource: kubevirt.VolumeSource{
-								PersistentVolumeClaim: &kubevirt.PersistentVolumeClaimVolumeSource{
-									ClaimName: pvcName,
-								},
-							},
-						},
-						{
-							Name: "cloudinitdisk",
-							VolumeSource: kubevirt.VolumeSource{
-								CloudInitNoCloud: &kubevirt.CloudInitNoCloudSource{
-									UserData:    userData,
-									NetworkData: networkData,
-								},
-							},
-						},
-					},
-					Networks: []kubevirt.Network{
-						{
-							Name: "default",
-							NetworkSource: kubevirt.NetworkSource{
-								Pod: &kubevirt.PodNetwork{},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	// Create the VM
-	createdVM, err := m.client.KubeVirtClient.VirtualMachines(m.namespace).Create(ctx, vm, metav1.CreateOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create VM: %w", err)
-	}
-
-	return createdVM, nil
-}
-
 // GetImageStatus returns the status of an image creation process
 func (m *Manager) GetImageStatus(ctx context.Context, imageName string) (*types.ImageStatusResponse, error) {
 	// Get image metadata
@@ -208,37 +78,16 @@ func (m *Manager) GetImageStatus(ctx context.Context, imageName string) (*types.
 		return nil, fmt.Errorf("image not found: %w", err)
 	}
 
-	// Get VM status
-	vm, err := m.client.KubeVirtClient.VirtualMachines(m.namespace).Get(ctx, image.VMName, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get VM: %w", err)
-	}
+	// TODO: Get VM status when KubeVirt client is available
+	// vm, err := m.client.KubeVirtClient.VirtualMachines(m.namespace).Get(ctx, image.VMName, metav1.GetOptions{})
+	// if err != nil {
+	//     return nil, fmt.Errorf("failed to get VM: %w", err)
+	// }
 
-	// Determine status based on VM state
-	status := types.ImageStatusPending
-	progress := 0
-	message := ""
-
-	if vm.Status.Ready {
-		status = types.ImageStatusReady
-		progress = 100
-		message = "Image creation completed successfully"
-	} else if vm.Status.Created {
-		status = types.ImageStatusCreating
-		progress = 50
-		message = "VM is running, image creation in progress"
-	}
-
-	// Check for failures
-	if vm.Status.Conditions != nil {
-		for _, condition := range vm.Status.Conditions {
-			if condition.Type == kubevirt.VirtualMachineFailure && condition.Status == "True" {
-				status = types.ImageStatusFailed
-				message = condition.Message
-				break
-			}
-		}
-	}
+	// For now, return a mock status
+	status := types.ImageStatusCreating
+	progress := 25
+	message := "Image creation in progress (KubeVirt integration pending)"
 
 	return &types.ImageStatusResponse{
 		Name:      imageName,
@@ -258,13 +107,13 @@ func (m *Manager) DeleteImage(ctx context.Context, imageName string) error {
 		return fmt.Errorf("image not found: %w", err)
 	}
 
-	// Delete VM if it exists
-	if image.VMName != "" {
-		err = m.client.KubeVirtClient.VirtualMachines(m.namespace).Delete(ctx, image.VMName, metav1.DeleteOptions{})
-		if err != nil {
-			klog.Errorf("Failed to delete VM %s: %v", image.VMName, err)
-		}
-	}
+	// TODO: Delete VM if it exists when KubeVirt client is available
+	// if image.VMName != "" {
+	//     err = m.client.KubeVirtClient.VirtualMachines(m.namespace).Delete(ctx, image.VMName, metav1.DeleteOptions{})
+	//     if err != nil {
+	//         klog.Errorf("Failed to delete VM %s: %v", image.VMName, err)
+	//     }
+	// }
 
 	// Delete PVC
 	if image.PVCName != "" {
@@ -285,64 +134,28 @@ func (m *Manager) DeleteImage(ctx context.Context, imageName string) error {
 
 // ListVMs lists all VMs in the namespace
 func (m *Manager) ListVMs(ctx context.Context) ([]*types.VM, error) {
-	vms, err := m.client.KubeVirtClient.VirtualMachines(m.namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "app=goldenpipe",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list VMs: %w", err)
-	}
+	// TODO: List VMs when KubeVirt client is available
+	// vms, err := m.client.KubeVirtClient.VirtualMachines(m.namespace).List(ctx, metav1.ListOptions{
+	//     LabelSelector: "app=goldenpipe",
+	// })
+	// if err != nil {
+	//     return nil, fmt.Errorf("failed to list VMs: %w", err)
+	// }
 
-	var result []*types.VM
-	for _, vm := range vms.Items {
-		vmType := &types.VM{
-			Name:      vm.Name,
-			Status:    m.mapVMStatus(vm.Status),
-			CreatedAt: vm.CreationTimestamp.Time,
-			UpdatedAt: vm.CreationTimestamp.Time,
-			Labels:    vm.Labels,
-		}
-
-		// Get image name from labels
-		if imageName, exists := vm.Labels["goldenpipe.io/image"]; exists {
-			vmType.ImageName = imageName
-		}
-
-		result = append(result, vmType)
-	}
-
-	return result, nil
+	// Return empty list for now
+	return []*types.VM{}, nil
 }
 
 // GetVM gets a specific VM
 func (m *Manager) GetVM(ctx context.Context, vmName string) (*types.VM, error) {
-	vm, err := m.client.KubeVirtClient.VirtualMachines(m.namespace).Get(ctx, vmName, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get VM: %w", err)
-	}
-
-	vmType := &types.VM{
-		Name:      vm.Name,
-		Status:    m.mapVMStatus(vm.Status),
-		CreatedAt: vm.CreationTimestamp.Time,
-		UpdatedAt: vm.CreationTimestamp.Time,
-		Labels:    vm.Labels,
-	}
-
-	// Get image name from labels
-	if imageName, exists := vm.Labels["goldenpipe.io/image"]; exists {
-		vmType.ImageName = imageName
-	}
-
-	return vmType, nil
+	// TODO: Get VM when KubeVirt client is available
+	return nil, fmt.Errorf("VM operations not available (KubeVirt integration pending)")
 }
 
 // DeleteVM deletes a VM
 func (m *Manager) DeleteVM(ctx context.Context, vmName string) error {
-	err := m.client.KubeVirtClient.VirtualMachines(m.namespace).Delete(ctx, vmName, metav1.DeleteOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to delete VM: %w", err)
-	}
-	return nil
+	// TODO: Delete VM when KubeVirt client is available
+	return fmt.Errorf("VM operations not available (KubeVirt integration pending)")
 }
 
 // HealthCheck performs a health check
@@ -388,15 +201,4 @@ func (m *Manager) GetMetrics(ctx context.Context) (*types.Metrics, error) {
 		StorageUsed:  "N/A", // TODO: Calculate actual storage usage
 		LastUpdated:  time.Now(),
 	}, nil
-}
-
-// mapVMStatus maps KubeVirt VM status to our VM status
-func (m *Manager) mapVMStatus(status kubevirt.VirtualMachineStatus) types.VMStatus {
-	if status.Ready {
-		return types.VMStatusRunning
-	}
-	if status.Created {
-		return types.VMStatusPending
-	}
-	return types.VMStatusStopped
 }

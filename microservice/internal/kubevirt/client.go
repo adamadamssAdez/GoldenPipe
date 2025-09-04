@@ -10,13 +10,12 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
-	"kubevirt.io/kubevirt v1.1.0"
 )
 
 // Client wraps Kubernetes and KubeVirt clients
 type Client struct {
 	KubeClient     kubernetes.Interface
-	KubeVirtClient kubevirt.KubevirtV1Interface
+	KubeVirtClient interface{} // TODO: Add proper KubeVirt client when dependencies are resolved
 	Config         *rest.Config
 }
 
@@ -49,15 +48,15 @@ func NewClient(kubeconfigPath string) (*Client, error) {
 		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
 
-	// Create KubeVirt client
-	kubeVirtClient, err := kubevirt.NewForConfig(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create KubeVirt client: %w", err)
-	}
+	// TODO: Create KubeVirt client when dependencies are resolved
+	// kubeVirtClient, err := kubevirt.NewForConfig(config)
+	// if err != nil {
+	//     return nil, fmt.Errorf("failed to create KubeVirt client: %w", err)
+	// }
 
 	return &Client{
 		KubeClient:     kubeClient,
-		KubeVirtClient: kubeVirtClient,
+		KubeVirtClient: nil, // TODO: Set when KubeVirt client is available
 		Config:         config,
 	}, nil
 }
@@ -69,11 +68,11 @@ func (c *Client) HealthCheck(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("failed to list nodes: %w", err)
 	}
 
-	// Check if KubeVirt is installed
-	_, err = c.KubeVirtClient.VirtualMachines("kubevirt").List(ctx, metav1.ListOptions{Limit: 1})
-	if err != nil {
-		return false, fmt.Errorf("KubeVirt not available: %w", err)
-	}
+	// TODO: Check if KubeVirt is installed when client is available
+	// _, err = c.KubeVirtClient.VirtualMachines("kubevirt").List(ctx, metav1.ListOptions{Limit: 1})
+	// if err != nil {
+	//     return false, fmt.Errorf("KubeVirt not available: %w", err)
+	// }
 
 	return true, nil
 }

@@ -85,7 +85,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	}
 
 	// Initialize storage manager
-	storageManager, err := storage.NewManager(kubeClient, cfg.StorageClass, cfg.Namespace)
+	storageManager, err := storage.NewManager(kubeClient.KubeClient, cfg.StorageClass, cfg.Namespace)
 	if err != nil {
 		logger.Fatal("Failed to create storage manager:", err)
 	}
