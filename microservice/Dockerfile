@@ -35,8 +35,8 @@ WORKDIR /app
 # Copy binary from builder stage
 COPY --from=builder /app/goldenpipe .
 
-# Copy configuration files
-COPY --from=builder /app/configs ./configs
+# Create configs directory
+RUN mkdir -p ./configs
 
 # Change ownership to non-root user
 RUN chown -R goldenpipe:goldenpipe /app

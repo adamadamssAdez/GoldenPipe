@@ -23,6 +23,20 @@ type Manager struct {
 	namespace    string
 }
 
+// encryptData encrypts sensitive data for storage
+func (m *Manager) encryptData(data []byte) ([]byte, error) {
+	// TODO: Implement proper encryption for FedRAMP compliance
+	// For now, return data as-is (placeholder for encryption)
+	return data, nil
+}
+
+// decryptData decrypts sensitive data from storage
+func (m *Manager) decryptData(encryptedData []byte) ([]byte, error) {
+	// TODO: Implement proper decryption for FedRAMP compliance
+	// For now, return data as-is (placeholder for decryption)
+	return encryptedData, nil
+}
+
 // NewManager creates a new storage manager
 func NewManager(client kubernetes.Interface, storageClass, namespace string) (*Manager, error) {
 	return &Manager{

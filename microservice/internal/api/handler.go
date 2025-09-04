@@ -27,6 +27,16 @@ func NewHandler(vmManager *kubevirt.Manager, storageManager *storage.Manager, lo
 	}
 }
 
+// auditLog logs security-relevant events for compliance
+func (h *Handler) auditLog(event, action, sourceIP, details string) {
+	h.logger.WithFields(logrus.Fields{
+		"audit_event": event,
+		"action":      action,
+		"source_ip":   sourceIP,
+		"details":     details,
+	}).Info("Audit log entry")
+}
+
 // SetupRoutes configures all API routes
 func (h *Handler) SetupRoutes(router *gin.Engine) {
 	v1 := router.Group("/api/v1")
@@ -53,10 +63,14 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 func (h *Handler) CreateImage(c *gin.Context) {
 	var req types.CreateImageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		h.auditLog("image_creation_failed", "validation_error", c.ClientIP(), err.Error())
 		h.logger.WithError(err).Error("Invalid request body")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Audit log the image creation request
+	h.auditLog("image_creation_started", "user_request", c.ClientIP(), req.Name)
 
 	h.logger.WithFields(logrus.Fields{
 		"name":    req.Name,
@@ -66,6 +80,7 @@ func (h *Handler) CreateImage(c *gin.Context) {
 
 	// Validate request
 	if err := req.Validate(); err != nil {
+		h.auditLog("image_creation_failed", "validation_error", c.ClientIP(), err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -73,11 +88,13 @@ func (h *Handler) CreateImage(c *gin.Context) {
 	// Create the image
 	image, err := h.vmManager.CreateGoldenImage(c.Request.Context(), &req)
 	if err != nil {
+		h.auditLog("image_creation_failed", "system_error", c.ClientIP(), err.Error())
 		h.logger.WithError(err).Error("Failed to create golden image")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	h.auditLog("image_creation_success", "user_request", c.ClientIP(), image.Name)
 	c.JSON(http.StatusAccepted, gin.H{
 		"message": "Golden image creation started",
 		"image":   image,
