@@ -1,0 +1,42 @@
+# KubeVirt Installation
+# This is a simplified version - in production, use the official KubeVirt operator
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubevirt
+  labels:
+    name: kubevirt
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubevirt-operator
+  namespace: kubevirt
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubevirt-operator
+rules:
+- apiGroups: [ "*" ]
+  resources: [ "*" ]
+  verbs: [ "*" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubevirt-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubevirt-operator
+subjects:
+- kind: ServiceAccount
+  name: kubevirt-operator
+  namespace: kubevirt
+---
+
+# Note: This is a placeholder for the actual KubeVirt installation
+# In production, install KubeVirt using:
+# kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/v1.1.0/kubevirt-operator.yaml
+# kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/v1.1.0/kubevirt-cr.yaml

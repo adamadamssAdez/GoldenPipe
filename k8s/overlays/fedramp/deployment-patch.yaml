@@ -1,0 +1,146 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goldenpipe
+  namespace: goldenpipe-fedramp
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: fedramp
+        compliance: fedramp
+        security-level: moderate
+      annotations:
+        fedramp.gov/compliance: moderate
+        security.gov/classification: sensitive
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: goldenpipe
+        image: goldenpipe:fedramp
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+            - ALL
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: LOG_LEVEL
+          value: "info"
+        - name: API_PORT
+          value: "8080"
+        - name: STORAGE_CLASS
+          value: "fedramp-storage"
+        - name: MAX_CONCURRENT_VMS
+          value: "3"
+        - name: AUDIT_ENABLED
+          value: "true"
+        - name: ENCRYPTION_ENABLED
+          value: "true"
+        - name: COMPLIANCE_MODE
+          value: "fedramp"
+        - name: SECURITY_LEVEL
+          value: "moderate"
+        - name: NETWORK_POLICIES
+          value: "enabled"
+        - name: POD_SECURITY_STANDARDS
+          value: "restricted"
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fedramp-secrets
+              key: ENCRYPTION_KEY
+        - name: AUDIT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fedramp-secrets
+              key: AUDIT_KEY
+        - name: COMPLIANCE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fedramp-secrets
+              key: COMPLIANCE_KEY
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8080
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8080
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: var-run
+          mountPath: /var/run
+        - name: fedramp-config
+          mountPath: /etc/fedramp
+          readOnly: true
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: var-run
+        emptyDir: {}
+      - name: fedramp-config
+        configMap:
+          name: fedramp-config
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-role.kubernetes.io/worker: ""
+      tolerations:
+      - key: "fedramp"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: security-level
+                operator: In
+                values:
+                - moderate
+                - high
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                  - goldenpipe
+              topologyKey: kubernetes.io/hostname

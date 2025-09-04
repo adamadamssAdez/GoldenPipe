@@ -1,0 +1,189 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: goldenpipe-network-policy
+  namespace: goldenpipe-fedramp
+  labels:
+    app.kubernetes.io/name: goldenpipe
+    compliance: fedramp
+    security-level: moderate
+  annotations:
+    fedramp.gov/compliance: moderate
+    security.gov/classification: sensitive
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: goldenpipe
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Allow ingress from monitoring namespace
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Allow ingress from compliance namespace
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: compliance
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  # Allow egress to Kubernetes API server
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 6443
+  # Allow egress to DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow egress to storage services
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: rook-ceph
+    ports:
+    - protocol: TCP
+      port: 6789
+    - protocol: TCP
+      port: 6800
+    - protocol: TCP
+      port: 6801
+    - protocol: TCP
+      port: 6802
+    - protocol: TCP
+      port: 6803
+  # Allow egress to KubeVirt services
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kubevirt
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow egress to CDI services
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: cdi
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow egress to monitoring services
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9090
+    - protocol: TCP
+      port: 8080
+  # Allow egress to logging services
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: logging
+    ports:
+    - protocol: TCP
+      port: 9200
+    - protocol: TCP
+      port: 5044
+  # Allow egress to external ISO sources (with restrictions)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: goldenpipe-vm-network-policy
+  namespace: goldenpipe-fedramp
+  labels:
+    app.kubernetes.io/name: goldenpipe
+    compliance: fedramp
+    security-level: moderate
+  annotations:
+    fedramp.gov/compliance: moderate
+    security.gov/classification: sensitive
+spec:
+  podSelector:
+    matchLabels:
+      kubevirt.io: virt-launcher
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from KubeVirt
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: kubevirt
+    ports:
+    - protocol: TCP
+      port: 22
+    - protocol: TCP
+      port: 3389
+    - protocol: TCP
+      port: 5900
+  egress:
+  # Allow egress to DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow egress to NTP
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 123
+  # Allow egress to package repositories (restricted)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-egress
+  namespace: goldenpipe-fedramp
+  labels:
+    app.kubernetes.io/name: goldenpipe
+    compliance: fedramp
+    security-level: moderate
+  annotations:
+    fedramp.gov/compliance: moderate
+    security.gov/classification: sensitive
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress: []

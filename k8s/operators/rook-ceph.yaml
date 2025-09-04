@@ -1,0 +1,68 @@
+# Rook-Ceph Installation
+# This is a simplified version - in production, use the official Rook-Ceph operator
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rook-ceph
+  labels:
+    name: rook-ceph
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rook-ceph-operator
+  namespace: rook-ceph
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rook-ceph-operator
+rules:
+- apiGroups: [ "*" ]
+  resources: [ "*" ]
+  verbs: [ "*" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rook-ceph-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rook-ceph-operator
+subjects:
+- kind: ServiceAccount
+  name: rook-ceph-operator
+  namespace: rook-ceph
+---
+# Storage Class for Rook-Ceph
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rook-ceph-block
+  labels:
+    app.kubernetes.io/name: rook-ceph
+provisioner: rook-ceph.rbd.csi.ceph.com
+parameters:
+  clusterID: rook-ceph
+  pool: replicapool
+  imageFormat: "2"
+  imageFeatures: layering
+  csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
+  csi.storage.k8s.io/provisioner-secret-namespace: rook-ceph
+  csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-provisioner
+  csi.storage.k8s.io/controller-expand-secret-namespace: rook-ceph
+  csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
+  csi.storage.k8s.io/node-stage-secret-namespace: rook-ceph
+  csi.storage.k8s.io/fstype: ext4
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+---
+
+# Note: This is a placeholder for the actual Rook-Ceph installation
+# In production, install Rook-Ceph using:
+# kubectl apply -f https://raw.githubusercontent.com/rook/rook/v1.12.0/deploy/examples/crds.yaml
+# kubectl apply -f https://raw.githubusercontent.com/rook/rook/v1.12.0/deploy/examples/common.yaml
+# kubectl apply -f https://raw.githubusercontent.com/rook/rook/v1.12.0/deploy/examples/operator.yaml
+# kubectl apply -f https://raw.githubusercontent.com/rook/rook/v1.12.0/deploy/examples/cluster.yaml

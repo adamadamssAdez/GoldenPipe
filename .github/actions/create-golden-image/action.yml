@@ -1,0 +1,151 @@
+name: 'Create Golden Image'
+description: 'Create a golden image using GoldenPipe API'
+inputs:
+  image_name:
+    description: 'Name of the golden image'
+    required: true
+  os_type:
+    description: 'Operating system type (linux or windows)'
+    required: true
+    default: 'linux'
+  base_iso_url:
+    description: 'URL of the base ISO image'
+    required: true
+  storage_size:
+    description: 'Storage size for the image'
+    required: false
+    default: '20Gi'
+  cpu:
+    description: 'Number of CPU cores'
+    required: false
+    default: '2'
+  memory:
+    description: 'Memory size'
+    required: false
+    default: '4Gi'
+  packages:
+    description: 'Comma-separated list of packages to install'
+    required: false
+  scripts:
+    description: 'Comma-separated list of scripts to run'
+    required: false
+  api_url:
+    description: 'GoldenPipe API URL'
+    required: false
+    default: 'http://goldenpipe.goldenpipe-system.svc.cluster.local'
+  timeout_minutes:
+    description: 'Timeout in minutes for image creation'
+    required: false
+    default: '30'
+
+outputs:
+  image_name:
+    description: 'Name of the created golden image'
+    value: ${{ steps.create.outputs.image_name }}
+  status:
+    description: 'Final status of the image creation'
+    value: ${{ steps.monitor.outputs.status }}
+
+runs:
+  using: 'composite'
+  steps:
+  - name: Create golden image
+    id: create
+    shell: bash
+    run: |
+      # Prepare customizations
+      CUSTOMIZATIONS=""
+      if [ -n "${{ inputs.packages }}" ]; then
+        PACKAGES=$(echo "${{ inputs.packages }}" | tr ',' '\n' | jq -R . | jq -s .)
+        CUSTOMIZATIONS="\"customizations\":{\"packages\":$PACKAGES}"
+      fi
+
+      if [ -n "${{ inputs.scripts }}" ]; then
+        SCRIPTS=$(echo "${{ inputs.scripts }}" | tr ',' '\n' | jq -R . | jq -s .)
+        if [ -n "$CUSTOMIZATIONS" ]; then
+          CUSTOMIZATIONS="$CUSTOMIZATIONS,\"scripts\":$SCRIPTS"
+        else
+          CUSTOMIZATIONS="\"customizations\":{\"scripts\":$SCRIPTS}"
+        fi
+      fi
+
+      # Create request payload
+      REQUEST_PAYLOAD=$(cat << EOF
+      {
+        "name": "${{ inputs.image_name }}",
+        "os_type": "${{ inputs.os_type }}",
+        "base_iso_url": "${{ inputs.base_iso_url }}",
+        "storage_size": "${{ inputs.storage_size }}",
+        "cpu": ${{ inputs.cpu }},
+        "memory": "${{ inputs.memory }}",
+        $CUSTOMIZATIONS
+      }
+      EOF
+      )
+
+      echo "Creating golden image with payload:"
+      echo "$REQUEST_PAYLOAD" | jq .
+
+      # Call GoldenPipe API
+      RESPONSE=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -d "$REQUEST_PAYLOAD" \
+        "${{ inputs.api_url }}/api/v1/images")
+
+      echo "API Response:"
+      echo "$RESPONSE" | jq .
+
+      # Extract image name from response
+      IMAGE_NAME=$(echo "$RESPONSE" | jq -r '.image.name // empty')
+      if [ -z "$IMAGE_NAME" ]; then
+        echo "Failed to create golden image"
+        exit 1
+      fi
+
+      echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+
+  - name: Monitor image creation
+    id: monitor
+    shell: bash
+    run: |
+      IMAGE_NAME="${{ steps.create.outputs.image_name }}"
+      MAX_ATTEMPTS=$(({{ inputs.timeout_minutes }} * 2))  # 30-second intervals
+      ATTEMPT=0
+
+      echo "Monitoring image creation for: $IMAGE_NAME"
+
+      while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+        STATUS_RESPONSE=$(curl -s "${{ inputs.api_url }}/api/v1/images/$IMAGE_NAME/status")
+        STATUS=$(echo "$STATUS_RESPONSE" | jq -r '.status')
+        PROGRESS=$(echo "$STATUS_RESPONSE" | jq -r '.progress // 0')
+        MESSAGE=$(echo "$STATUS_RESPONSE" | jq -r '.message // ""')
+        
+        echo "Status: $STATUS, Progress: $PROGRESS%, Message: $MESSAGE"
+        
+        case $STATUS in
+          "ready")
+            echo "✅ Golden image creation completed successfully!"
+            echo "status=ready" >> $GITHUB_OUTPUT
+            exit 0
+            ;;
+          "failed")
+            echo "❌ Golden image creation failed!"
+            echo "Error: $MESSAGE"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+            ;;
+          "creating"|"pending")
+            echo "⏳ Image creation in progress... ($PROGRESS%)"
+            ;;
+          *)
+            echo "⚠️ Unknown status: $STATUS"
+            ;;
+        esac
+        
+        ATTEMPT=$((ATTEMPT + 1))
+        sleep 30
+      done
+
+      echo "⏰ Timeout waiting for image creation to complete"
+      echo "status=timeout" >> $GITHUB_OUTPUT
+      exit 1

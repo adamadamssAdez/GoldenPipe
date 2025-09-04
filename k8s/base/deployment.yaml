@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goldenpipe
+  namespace: goldenpipe-system
+  labels:
+    app.kubernetes.io/name: goldenpipe
+    app.kubernetes.io/part-of: goldenpipe
+    app.kubernetes.io/component: api-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: goldenpipe
+      app.kubernetes.io/component: api-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: goldenpipe
+        app.kubernetes.io/component: api-server
+    spec:
+      serviceAccountName: goldenpipe
+      containers:
+      - name: goldenpipe
+        image: goldenpipe:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: LOG_LEVEL
+          value: "info"
+        - name: API_PORT
+          value: "8080"
+        - name: STORAGE_CLASS
+          value: "rook-ceph-block"
+        - name: MAX_CONCURRENT_VMS
+          value: "5"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: goldenpipe
+  namespace: goldenpipe-system
+  labels:
+    app.kubernetes.io/name: goldenpipe
+    app.kubernetes.io/part-of: goldenpipe
+    app.kubernetes.io/component: api-server
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: goldenpipe
+    app.kubernetes.io/component: api-server
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: goldenpipe
+  namespace: goldenpipe-system
+  labels:
+    app.kubernetes.io/name: goldenpipe
+    app.kubernetes.io/part-of: goldenpipe
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: goldenpipe.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: goldenpipe
+            port:
+              number: 80

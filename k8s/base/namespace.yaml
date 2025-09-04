@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: goldenpipe-system
+  labels:
+    name: goldenpipe-system
+    app.kubernetes.io/name: goldenpipe
+    app.kubernetes.io/part-of: goldenpipe
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: goldenpipe
+  namespace: goldenpipe-system
+  labels:
+    app.kubernetes.io/name: goldenpipe
+    app.kubernetes.io/part-of: goldenpipe
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: goldenpipe
+  labels:
+    app.kubernetes.io/name: goldenpipe
+    app.kubernetes.io/part-of: goldenpipe
+rules:
+- apiGroups: [ "" ]
+  resources: [ "pods", "services", "endpoints", "persistentvolumeclaims", "events", "configmaps", "secrets" ]
+  verbs: [ "*" ]
+- apiGroups: [ "apps" ]
+  resources: [ "deployments", "daemonsets", "replicasets", "statefulsets" ]
+  verbs: [ "*" ]
+- apiGroups: [ "kubevirt.io" ]
+  resources: [ "virtualmachines", "virtualmachineinstances", "virtualmachineinstancemigrations" ]
+  verbs: [ "*" ]
+- apiGroups: [ "cdi.kubevirt.io" ]
+  resources: [ "datavolumes", "datasources" ]
+  verbs: [ "*" ]
+- apiGroups: [ "snapshot.storage.k8s.io" ]
+  resources: [ "volumesnapshots", "volumesnapshotcontents" ]
+  verbs: [ "*" ]
+- apiGroups: [ "storage.k8s.io" ]
+  resources: [ "storageclasses" ]
+  verbs: [ "get", "list" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: goldenpipe
+  labels:
+    app.kubernetes.io/name: goldenpipe
+    app.kubernetes.io/part-of: goldenpipe
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: goldenpipe
+subjects:
+- kind: ServiceAccount
+  name: goldenpipe
+  namespace: goldenpipe-system

@@ -1,0 +1,42 @@
+# CDI (Containerized Data Importer) Installation
+# This is a simplified version - in production, use the official CDI operator
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cdi
+  labels:
+    name: cdi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cdi-operator
+  namespace: cdi
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cdi-operator
+rules:
+- apiGroups: [ "*" ]
+  resources: [ "*" ]
+  verbs: [ "*" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cdi-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cdi-operator
+subjects:
+- kind: ServiceAccount
+  name: cdi-operator
+  namespace: cdi
+---
+
+# Note: This is a placeholder for the actual CDI installation
+# In production, install CDI using:
+# kubectl apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/v1.55.0/cdi-operator.yaml
+# kubectl apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/v1.55.0/cdi-cr.yaml

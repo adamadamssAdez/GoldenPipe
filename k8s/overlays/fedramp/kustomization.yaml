@@ -1,0 +1,44 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# FedRAMP-specific overlay for enhanced security and compliance
+namespace: goldenpipe-fedramp
+
+resources:
+- ../../base
+
+patchesStrategicMerge:
+- deployment-patch.yaml
+- service-patch.yaml
+- rbac-patch.yaml
+
+configMapGenerator:
+- name: fedramp-config
+  literals:
+  - LOG_LEVEL=info
+  - AUDIT_ENABLED=true
+  - ENCRYPTION_ENABLED=true
+  - COMPLIANCE_MODE=fedramp
+  - SECURITY_LEVEL=moderate
+  - NETWORK_POLICIES=enabled
+  - POD_SECURITY_STANDARDS=restricted
+
+secretGenerator:
+- name: fedramp-secrets
+  literals:
+  - ENCRYPTION_KEY=changeme-in-production
+  - AUDIT_KEY=changeme-in-production
+  - COMPLIANCE_KEY=changeme-in-production
+
+commonLabels:
+  app.kubernetes.io/part-of: goldenpipe
+  app.kubernetes.io/component: fedramp
+  compliance: fedramp
+  security-level: moderate
+  data-classification: sensitive
+
+commonAnnotations:
+  fedramp.gov/compliance: moderate
+  fedramp.gov/authorization: pending
+  security.gov/classification: sensitive
+  security.gov/controls: implemented
