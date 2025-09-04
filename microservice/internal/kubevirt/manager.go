@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kubevirt/kubevirt v1.1.0"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/klog/v2"
+	"kubevirt.io/kubevirt v1.1.0"
 
 	"github.com/goldenpipe/microservice/internal/storage"
 	"github.com/goldenpipe/microservice/pkg/types"
