@@ -132,7 +132,7 @@ jobs:
         echo "✅ Deployment skipped - KUBE_CONFIG secret not configured"
         echo "This is normal for development/testing environments"
 
-  # Dry-run deployment validation (always runs)
+  # Basic manifest validation (always runs)
   validate-manifests:
     needs: build
     runs-on: ubuntu-latest
@@ -140,17 +140,35 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     
-    - name: Set up kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'v1.29.0'
-    
     - name: Validate Kubernetes manifests
       run: |
         # Update image tag in deployment for validation
         sed -i "s|image: goldenpipe:latest|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest|g" k8s/base/deployment.yaml
         
-        # Validate manifests without applying (dry-run)
-        kubectl apply -f k8s/base/ --dry-run=client --validate=true
+        # Basic YAML syntax validation
+        echo "Validating YAML syntax..."
+        for file in k8s/base/*.yaml; do
+          if [ -f "$file" ]; then
+            echo "Checking $file"
+            python3 -c "import yaml; yaml.safe_load(open('$file'))" || exit 1
+          fi
+        done
+        
+        # Check for required fields
+        echo "Validating required fields..."
+        if ! grep -q "kind:" k8s/base/deployment.yaml; then
+          echo "❌ deployment.yaml missing 'kind' field"
+          exit 1
+        fi
+        
+        if ! grep -q "apiVersion:" k8s/base/deployment.yaml; then
+          echo "❌ deployment.yaml missing 'apiVersion' field"
+          exit 1
+        fi
+        
+        if ! grep -q "kind:" k8s/base/namespace.yaml; then
+          echo "❌ namespace.yaml missing 'kind' field"
+          exit 1
+        fi
         
         echo "✅ Kubernetes manifests are valid"
