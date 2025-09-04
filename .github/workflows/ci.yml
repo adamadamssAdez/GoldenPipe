@@ -150,7 +150,7 @@ jobs:
         for file in k8s/base/*.yaml; do
           if [ -f "$file" ]; then
             echo "Checking $file"
-            python3 -c "import yaml; yaml.safe_load(open('$file'))" || exit 1
+            python3 -c "import yaml; list(yaml.safe_load_all(open('$file')))" || exit 1
           fi
         done
         

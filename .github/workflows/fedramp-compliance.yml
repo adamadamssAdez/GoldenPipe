@@ -22,7 +22,10 @@ jobs:
       run: |
         # Install security scanning tools
         sudo apt-get update
-        sudo apt-get install -y bandit semgrep
+        sudo apt-get install -y bandit python3-pip
+        
+        # Install semgrep via pip
+        pip3 install semgrep
         
         # Scan Go code for security issues
         bandit -r microservice/ -f json -o security-report.json || true
