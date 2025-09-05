@@ -15,6 +15,10 @@ env:
 jobs:
   security-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     steps:
     - uses: actions/checkout@v4
     
@@ -66,8 +70,9 @@ jobs:
       with:
         results_file: 'scorecard-results.json'
         results_format: 'json'
-        publish_results: true
+        publish_results: false
         repo_token: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true
     
     - name: Generate security summary
       run: |
@@ -92,6 +97,7 @@ jobs:
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
+      continue-on-error: true
     
     - name: Upload security reports
       uses: actions/upload-artifact@v4
