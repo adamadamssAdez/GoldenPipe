@@ -48,9 +48,13 @@ jobs:
         severity: 'CRITICAL,HIGH,MEDIUM,LOW'
     
     - name: Run Gosec security scan
-      uses: securecodewarrior/github-action-gosec@master
-      with:
-        args: '-fmt json -out gosec-report.json ./microservice/...'
+      run: |
+        # Install gosec
+        go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+        
+        # Run gosec scan
+        cd microservice
+        gosec -fmt json -out ../gosec-report.json ./...
     
     - name: Run Semgrep security scan
       run: |
