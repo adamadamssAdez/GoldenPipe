@@ -106,6 +106,56 @@ jobs:
         echo "- Automated vulnerability detection" >> security-summary.md
         echo "- Comprehensive audit logging" >> security-summary.md
     
+    - name: Generate OpenSSF Scorecard Report
+      run: |
+        if [ -f scorecard-results.json ]; then
+          echo "# OpenSSF Scorecard Security Report" > scorecard-report.md
+          echo "" >> scorecard-report.md
+          echo "**Generated:** $(date)" >> scorecard-report.md
+          echo "**Repository:** $(jq -r '.repo.name' scorecard-results.json)" >> scorecard-report.md
+          echo "**Commit:** $(jq -r '.repo.commit' scorecard-results.json)" >> scorecard-report.md
+          echo "**Overall Score:** $(jq -r '.score' scorecard-results.json)/10" >> scorecard-report.md
+          echo "" >> scorecard-report.md
+          
+          echo "## Security Check Results" >> scorecard-report.md
+          echo "" >> scorecard-report.md
+          echo "| Check | Score | Status | Description |" >> scorecard-report.md
+          echo "|-------|-------|--------|-------------|" >> scorecard-report.md
+          
+          # Process each check
+          jq -r '.checks[] | "\(.name)|\(.score)|\(if .score >= 8 then "✅ Good" elif .score >= 5 then "⚠️ Fair" elif .score >= 0 then "❌ Poor" else "❓ N/A" end)|\(.reason)"' scorecard-results.json | while IFS='|' read -r name score status reason; do
+            echo "| $name | $score/10 | $status | $reason |" >> scorecard-report.md
+          done
+          
+          echo "" >> scorecard-report.md
+          echo "## Detailed Findings" >> scorecard-report.md
+          echo "" >> scorecard-report.md
+          
+          # Add detailed findings for each check
+          jq -r '.checks[] | select(.details != null) | "### \(.name)\n\n\(.details[] | "- \(.)")\n"' scorecard-results.json >> scorecard-report.md
+          
+          echo "## Recommendations" >> scorecard-report.md
+          echo "" >> scorecard-report.md
+          echo "### High Priority" >> scorecard-report.md
+          echo "- Enable branch protection on main branch" >> scorecard-report.md
+          echo "- Pin all GitHub Actions to specific commit hashes" >> scorecard-report.md
+          echo "- Add SECURITY.md file for vulnerability disclosure" >> scorecard-report.md
+          echo "- Enable Dependabot for dependency updates" >> scorecard-report.md
+          echo "" >> scorecard-report.md
+          echo "### Medium Priority" >> scorecard-report.md
+          echo "- Add code review requirements for pull requests" >> scorecard-report.md
+          echo "- Implement fuzzing for security testing" >> scorecard-report.md
+          echo "- Add signed releases" >> scorecard-report.md
+          echo "- Pin Docker base images to specific hashes" >> scorecard-report.md
+          echo "" >> scorecard-report.md
+          echo "### Low Priority" >> scorecard-report.md
+          echo "- Add more contributors from different organizations" >> scorecard-report.md
+          echo "- Apply for OpenSSF Best Practices Badge" >> scorecard-report.md
+          echo "- Add more comprehensive CI/CD testing" >> scorecard-report.md
+        else
+          echo "Scorecard results not found" > scorecard-report.md
+        fi
+    
     - name: Upload Trivy results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
       if: always()
@@ -123,6 +173,7 @@ jobs:
           gosec-report.json
           semgrep-report.json
           scorecard-results.json
+          scorecard-report.md
           security-summary.md
 
   compliance-validation:
